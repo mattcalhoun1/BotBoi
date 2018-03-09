@@ -22,9 +22,9 @@ from bot_action import BotAction, LexAction, PinPromptAction, DidntUnderstandAct
 import uuid
 
 class BoiBotEnvVars:
-    ALEXA_USER_TABLE = 'AlexaUserTable'
-    ALEXA_USER_ID_COLUMN = 'AlexaUserIdColumn'
-    ALEXA_USER_ID_INDEX = 'AlexaUserIdIndex'
+    ALEXA_USER_TABLE = 'BoiUserTable'
+    ALEXA_USER_ID_COLUMN = 'BoiUserIdColumn'
+    ALEXA_USER_ID_INDEX = 'BoiUserIdIndex'
 
 '''
     This is the base class for interfaces that allow users
@@ -129,14 +129,20 @@ class BoiBotInterface:
         print ('querying for user: ' + id)
         id = urllib2.unquote(str(id))
 
-        response = table.query(
-            IndexName=aws_helper.getEnvVar(BoiBotEnvVars.ALEXA_USER_ID_INDEX),
-            KeyConditionExpression=Key(aws_helper.getEnvVar(BoiBotEnvVars.ALEXA_USER_ID_COLUMN)).eq(id)
-        )
-        print ('found ' + str(response))    
         user = None
-        if 'Items' in response.keys() and len(response['Items']) > 0:
-            user = response['Items'][0]
+        if len(aws_helper.getEnvVar(BoiBotEnvVars.ALEXA_USER_ID_INDEX)) > 0:
+            response = table.query(
+                IndexName=aws_helper.getEnvVar(BoiBotEnvVars.ALEXA_USER_ID_INDEX),
+                KeyConditionExpression=Key(aws_helper.getEnvVar(BoiBotEnvVars.ALEXA_USER_ID_COLUMN)).eq(id)
+            )
+        
+            print ('found ' + str(response))    
+            if 'Items' in response.keys() and len(response['Items']) > 0:
+                user = response['Items'][0]
+        else:
+            response = table.get_item(Key={aws_helper.getEnvVar(BoiBotEnvVars.ALEXA_USER_ID_COLUMN):id})
+            print ('found ' + str(response))    
+            user = response['Item']
         
         self.decryptFields(user)
         return user
