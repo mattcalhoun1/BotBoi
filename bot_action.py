@@ -14,6 +14,7 @@ from string import Formatter
 from collections import OrderedDict
 import lib.lex_helper as lex_helper
 import lib.aws_helper as aws_helper
+import lib.jwt_helper as jwt_helper
 
 class BotActionEnvVars:
     BOI_RESPONSE_TABLE = 'BoiResponseTable'
@@ -46,18 +47,33 @@ class BotAction:
                 textResponse = textResponse + ele[0]
 
                 if len(ele) > 1 and ele[1] != None:
-                    textResponse = textResponse + str(self.getFormattedFieldValue (ele[1], apiResponses))
+                    textResponse = textResponse + str(self.getFormattedFieldValue (ele[1], self.jwt, self.userSession, apiResponses))
 
 
         return BotResponse(textResponse, self.getCardTitle(), self.shouldSessionEnd(apiResponses))
 
-    def getFormattedFieldValue (self, fullFieldName, serviceResponses):
+    def getFormattedFieldValue (self, fullFieldName, jwt, userSession, serviceResponses):
         # Maybe computed or complex or simple. If it's computed,
         # the implementation is expected to be in a subclass.
         # if it's simple, it's expected to be a top level attribute of a 
         # rest response
         svcName = fullFieldName.split('.')[0]
-        if svcName.startswith('@'):
+        if svcName.lower() == 'jwt':
+            fieldName = fullFieldName.split('.')[1]
+            # populate from jwt
+            jwtValue = jwt_helper.extract_from_payload(fieldName, jwt)
+            if jwtValue == None:
+                return fieldName + ' not found in jwt payload'
+            return jwtValue
+        elif svcName.lower() == 'session':
+            fieldName = fullFieldName.split('.')[1]
+            
+            # populate from session
+            if fieldName in userSession.keys():
+                return str(userSession[fieldName])
+            else:
+                return fieldName + ' not found in session'
+        elif svcName.startswith('@'):
             # Invoke the method on self (useful for subclasses)
             # If there's a '.' after the method name, retrieve the given field (and format)
             methodParts = fullFieldName.split('.')

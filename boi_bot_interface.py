@@ -14,6 +14,7 @@ import json
 import urllib2
 import lib.aws_helper as aws_helper
 import lib.lex_helper as lex_helper
+import lib.jwt_helper as jwt_helper
 import dateutil
 import pytz
 from dateutil import parser
@@ -167,16 +168,7 @@ class BoiBotInterface:
         return aws_helper.getEnvVar('AppUrlPrefix')
 
     def extract_user_id_from_jwt (self, jwt):
-        jwtPayload = jwt.split('.')[1]
-        jwtPayload = self.httpDecodeJwt(jwtPayload)
-        while (len(jwtPayload) % 4) != 0:
-            jwtPayload = jwtPayload + '='
-        jsonPayload = base64.b64decode(jwtPayload)
-        payloadDict = json.loads(jsonPayload)
-        return payloadDict['BoiUserId']
-
-    def httpDecodeJwt (self, jwt):
-        return jwt.replace('-', '+').replace('_', '/')  
+        return jwt_helper.extract_from_payload('BoiUserId', jwt)
 
     def getSessionAttributes (self, session):
         print ('bot interface did not override getSessionAttributes')
